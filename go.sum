@@ -1,3 +1,5 @@
+github.com/abourget/go-obs-websocket v0.0.0-20200318034817-203f1817bae0 h1:H5+FfmS8eW/GYWQX5tpSpJZMwNPpqw1HhonDxqaNWcw=
+github.com/abourget/go-obs-websocket v0.0.0-20200318034817-203f1817bae0/go.mod h1:P5w+dDqQEbCMFAkmucNcEQ6xgAt/NP+Aw58OQfY/H/o=
 github.com/christopher-dG/go-obs-websocket v0.0.0-20181224025342-2efc3605bff5 h1:VtKPsvxzKt/+EnkhcPp0Xg7MDjt/a+CNRSj5phITbjo=
 github.com/christopher-dG/go-obs-websocket v0.0.0-20181224025342-2efc3605bff5/go.mod h1:hFg9UFHefvNCvpWpYtOaP/VT2HyokIJsmV1AUBjpTeQ=
 github.com/gorilla/websocket v1.4.0 h1:WDFjx/TMzVgy9VdMMQi2K2Emtwi2QcUQsztZ/zLaH/Q=

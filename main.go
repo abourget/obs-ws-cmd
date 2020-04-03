@@ -2,17 +2,21 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
-	"os/signal"
-	"syscall"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
 	obsws "github.com/christopher-dG/go-obs-websocket"
 )
 
 func main() {
+	if len(os.Args) < 2 {
+		log.Fatal("Invalid number of args, specify command")
+	}
+
 	// Connect a client.
 	c := obsws.Client{Host: "localhost", Port: 4444}
 	if err := c.Connect(); err != nil {
@@ -20,56 +24,38 @@ func main() {
 	}
 	defer c.Disconnect()
 
-	req := obsws.NewGetTextFreetype2PropertiesRequest("IP")
-	resp, err := req.SendReceive(c)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	cnt, _ := json.MarshalIndent(resp, "", "  ")
-	log.Println("streaming:", string(cnt))
-
 	// Set the amount of time we can wait for a response.
 	obsws.SetReceiveTimeout(time.Second * 2)
 
-	go func() {
-		for i := 0; ; i++ {
-			time.Sleep(5 * time.Second)
+	var resp interface{}
+	var err error
 
-			req := obsws.NewSetTextFreetype2PropertiesRequest(
-				"IP",
-				0xeeeeeeff, 0xeeeeeeff, 0, false, nil, "", 0, 0, "", false, false, false,
-				fmt.Sprintf("This is the text %d", i),
-				"", false,
-			)
-			resp, err := req.SendReceive(c)
+	cmds := []struct {
+		regex string
+		run   func(g []string)
+	}{
+		{"/scene=(.*)", func(g []string) {
+			resp, err = obsws.NewSetCurrentSceneRequest(g[1]).SendReceive(c)
+		}},
+		{"/vol=([^,]+),([0-9.]+)", func(g []string) {
+			level, err2 := strconv.ParseFloat(g[2], 64)
+			if err2 != nil {
+				err = err2
+				return
+			}
+			resp, err = obsws.NewSetVolumeRequest(g[1], level).SendReceive(c)
+		}},
+	}
+
+	for _, cmd := range cmds {
+		if match := regexp.MustCompile(cmd.regex).FindStringSubmatch(strings.Join(os.Args[1:], " ")); match != nil {
+			cmd.run(match)
 			if err != nil {
 				log.Fatal(err)
 			}
-
-			cnt, _ := json.MarshalIndent(resp, "", "  ")
-			log.Println("set text:", string(cnt))
 		}
-	}()
-
-	// Respond to events by registering handlers.
-	c.MustAddEventHandler("SwitchScenes", func(e obsws.Event) {
-		// Make sure to assert the actual event type.
-		log.Println("new scene:", e.(obsws.SwitchScenesEvent).SceneName)
-	})
-	c.MustAddEventHandler("TransitionBegin", func(e obsws.Event) {
-		// Make sure to assert the actual event type.
-		ev := e.(obsws.TransitionBeginEvent)
-		log.Println("transition begin:", ev.Name, ev.Duration, ev.FromScene, ev.ToScene)
-	})
-
-	signals := make(chan os.Signal)
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
-	s := <-signals
-	switch s {
-	case syscall.SIGTERM, syscall.SIGINT:
-		log.Println("Received Ctrl+C")
-	default:
-		log.Println("Received signal", s)
 	}
+
+	cnt, _ := json.MarshalIndent(resp, "", "  ")
+	log.Println("set text:", string(cnt))
 }
